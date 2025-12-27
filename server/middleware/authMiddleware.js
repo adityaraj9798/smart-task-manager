@@ -1,9 +1,8 @@
 const jwt = require("jsonwebtoken");
 
-const protect = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
   let token;
 
-  // token format: Bearer <token>
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
@@ -13,14 +12,16 @@ const protect = (req, res, next) => {
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = decoded; // { id: userId }
+      req.user = { id: decoded.id };
       next();
-    } catch (error) {
+    } catch (err) {
       return res.status(401).json({ message: "Not authorized, invalid token" });
     }
-  } else {
+  }
+
+  if (!token) {
     return res.status(401).json({ message: "Not authorized, no token" });
   }
 };
 
-module.exports = protect;
+module.exports = authMiddleware;

@@ -1,42 +1,65 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import API from "../services/api";
 
-function Login() {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    console.log("LOGIN CLICKED");
 
     try {
-      const res = await axios.post("http://localhost:5001/api/auth/login", {
+      const res = await API.post("/auth/login", {
         email,
         password,
       });
 
-      // ✅ save token
+      console.log("LOGIN RESPONSE FULL:", res);
+      console.log("LOGIN RESPONSE DATA:", res.data);
+
+      // 🔴 IMPORTANT SAFETY CHECK
+      if (!res.data || !res.data.token) {
+        console.error("❌ TOKEN NOT FOUND IN RESPONSE");
+        alert("Login failed: token missing");
+        return;
+      }
+
+      // ✅ SAVE TOKEN
       localStorage.setItem("token", res.data.token);
 
-      // ✅ go to dashboard
+      console.log(
+        "✅ TOKEN SAVED:",
+        localStorage.getItem("token")
+      );
+
+      // ✅ GO TO DASHBOARD
       navigate("/dashboard");
+
     } catch (err) {
+      console.error(
+        "LOGIN ERROR:",
+        err.response?.data || err.message
+      );
       alert("Login failed");
-      console.error(err);
     }
   };
 
   return (
-    <div style={{ padding: "40px", color: "white" }}>
+    <div style={{ padding: 40, color: "white" }}>
       <h1>Login</h1>
 
       <form onSubmit={handleLogin}>
         <input
+          type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
+
         <br /><br />
 
         <input
@@ -44,7 +67,9 @@ function Login() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
+
         <br /><br />
 
         <button type="submit">Login</button>
@@ -52,5 +77,3 @@ function Login() {
     </div>
   );
 }
-
-export default Login;
