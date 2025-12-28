@@ -1,25 +1,55 @@
 const express = require("express");
 const router = express.Router();
+const Task = require("../models/Task");
 
-const {
-  getTasks,
-  createTask,
-  deleteTask,
-  updateTask,
-} = require("../controllers/taskcontroller");
+router.post("/add", async (req, res) => {
+  try {
+    if (!req.body.title) {
+      return res.status(400).json({ success: false });
+    }
 
-const authMiddleware = require("../middleware/authMiddleware");
+    const task = new Task({
+      title: req.body.title,
+      completed: false,
+    });
 
-// GET all tasks
-router.get("/", authMiddleware, getTasks);
+    await task.save();
+    res.json({ success: true, task });
+  } catch (e) {
+    res.status(500).json({ success: false });
+  }
+});
 
-// CREATE task
-router.post("/", authMiddleware, createTask);
+router.get("/all", async (req, res) => {
+  try {
+    const tasks = await Task.find();
+    res.json({ success: true, tasks });
+  } catch (e) {
+    res.status(500).json({ success: false });
+  }
+});
 
-// UPDATE task (✅ THIS WAS BREAKING)
-router.put("/:id", authMiddleware, updateTask);
+router.patch("/:id/complete", async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) {
+      return res.status(404).json({ success: false });
+    }
+    task.completed = !task.completed;
+    await task.save();
+    res.json({ success: true, task });
+  } catch (e) {
+    res.status(500).json({ success: false });
+  }
+});
 
-// DELETE task
-router.delete("/:id", authMiddleware, deleteTask);
+router.delete("/:id", async (req, res) => {
+  try {
+    await Task.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false });
+  }
+});
 
 module.exports = router;
