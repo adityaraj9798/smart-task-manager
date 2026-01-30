@@ -1,12 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [dark, setDark] = useState(true);
+  const inputRef = useRef(null);
 
-  // ================= AI ANALYSIS =================
+  // Persisted UI
+  const [filter, setFilter] = useState(localStorage.getItem("filter") || "all");
+  const [dark, setDark] = useState(localStorage.getItem("dark") !== "false");
+
+  // New features
+  const [focusMode, setFocusMode] = useState(false);
+  const [aiThinking, setAiThinking] = useState(false);
+
+  /* ================= AI ANALYSIS ================= */
   const analyzeTask = (text) => {
     const t = text.toLowerCase();
     let score = 10;
@@ -34,7 +41,13 @@ function App() {
 
   const aiPreview = title ? analyzeTask(title) : null;
 
-  // ================= FETCH =================
+  /* ================= Persist ================= */
+  useEffect(() => {
+    localStorage.setItem("dark", dark);
+    localStorage.setItem("filter", filter);
+  }, [dark, filter]);
+
+  /* ================= Fetch ================= */
   const fetchTasks = async () => {
     const res = await fetch("http://localhost:5001/api/tasks/all");
     const data = await res.json();
@@ -45,7 +58,18 @@ function App() {
     fetchTasks();
   }, []);
 
-  // ================= ADD =================
+  /* ================= AI Thinking ================= */
+  useEffect(() => {
+    if (!title) {
+      setAiThinking(false);
+      return;
+    }
+    setAiThinking(true);
+    const t = setTimeout(() => setAiThinking(false), 700);
+    return () => clearTimeout(t);
+  }, [title]);
+
+  /* ================= CRUD ================= */
   const addTask = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -60,7 +84,6 @@ function App() {
     fetchTasks();
   };
 
-  // ================= TOGGLE =================
   const toggleComplete = async (id) => {
     await fetch(`http://localhost:5001/api/tasks/${id}/complete`, {
       method: "PATCH",
@@ -68,7 +91,6 @@ function App() {
     fetchTasks();
   };
 
-  // ================= DELETE =================
   const deleteTask = async (id) => {
     await fetch(`http://localhost:5001/api/tasks/${id}`, {
       method: "DELETE",
@@ -76,21 +98,41 @@ function App() {
     fetchTasks();
   };
 
-  // ================= FILTER =================
-  const filteredTasks = tasks.filter((t) => {
+  /* ================= Filter ================= */
+  let visibleTasks = tasks.filter((t) => {
     if (filter === "pending") return !t.completed;
     if (filter === "completed") return t.completed;
     return true;
   });
 
-  // ================= PROGRESS =================
+  /* ================= Focus Mode ================= */
+  if (focusMode && visibleTasks.length > 0) {
+    visibleTasks = [
+      [...visibleTasks].sort(
+        (a, b) => analyzeTask(b.title).score - analyzeTask(a.title).score
+      )[0],
+    ];
+  }
+
+  /* ================= Analytics ================= */
   const total = tasks.length;
   const completed = tasks.filter((t) => t.completed).length;
-  const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+  const pending = total - completed;
+  const highPriority = tasks.filter(
+    (t) => analyzeTask(t.title).priority === "high"
+  ).length;
 
-  // ================= THEME =================
-  const bg = dark ? "#0f172a" : "#f8fafc";
-  const card = dark ? "#020617" : "#ffffff";
+  const percent = total ? Math.round((completed / total) * 100) : 0;
+
+  /* ================= Theme ================= */
+  const bg = dark
+    ? "linear-gradient(135deg,#020617,#0f172a)"
+    : "#f8fafc";
+
+  const glass = dark
+    ? "rgba(15,23,42,0.6)"
+    : "rgba(255,255,255,0.6)";
+
   const text = dark ? "#e5e7eb" : "#020617";
 
   const priorityColor = {
@@ -100,33 +142,135 @@ function App() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: bg, color: text, padding: "40px 12px", fontFamily: "Inter, Arial" }}>
-      <div style={{ maxWidth: "520px", margin: "auto", background: card, borderRadius: "16px", padding: "22px", boxShadow: "0 30px 60px rgba(0,0,0,0.35)" }}>
-        
+    <div
+      style={{
+        minHeight: "100vh",
+        background: bg,
+        color: text,
+        padding: "40px 12px",
+        fontFamily: "Inter, Arial",
+      }}
+    >
+      <style>
+        {`
+          .glass {
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.08);
+          }
+          .task-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.3s ease;
+          }
+          .task-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+          }
+          button:active {
+            transform: scale(0.95);
+          }
+        `}
+      </style>
+
+      <div
+        className="glass"
+        style={{
+          maxWidth: "540px",
+          margin: "auto",
+          background: glass,
+          borderRadius: "18px",
+          padding: "22px",
+          boxShadow: "0 30px 60px rgba(0,0,0,0.35)",
+        }}
+      >
         {/* HEADER */}
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2>🤖 AI Task Manager</h2>
-          <button onClick={() => setDark(!dark)}>{dark ? "🌞" : "🌙"}</button>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button onClick={() => setFocusMode(!focusMode)}>
+              🎯
+            </button>
+            <button onClick={() => setDark(!dark)}>
+              {dark ? "🌞" : "🌙"}
+            </button>
+          </div>
+        </div>
+
+        {/* ANALYTICS */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4,1fr)",
+            gap: "8px",
+            margin: "14px 0",
+          }}
+        >
+          {[
+            ["Total", total],
+            ["Done", completed],
+            ["Pending", pending],
+            ["High", highPriority],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="glass"
+              style={{
+                padding: "8px",
+                borderRadius: "12px",
+                textAlign: "center",
+              }}
+            >
+              <b style={{ color: label === "High" ? "#ef4444" : text }}>
+                {value}
+              </b>
+              <div style={{ fontSize: "11px", opacity: 0.7 }}>{label}</div>
+            </div>
+          ))}
         </div>
 
         {/* PROGRESS */}
-        <p style={{ opacity: 0.7 }}>{completed} / {total} completed</p>
-        <div style={{ height: "8px", background: dark ? "#020617" : "#e5e7eb", borderRadius: "999px", overflow: "hidden", marginBottom: "14px" }}>
-          <div style={{ width: `${percent}%`, height: "100%", background: "#4f46e5", transition: "0.4s" }} />
+        <div
+          style={{
+            height: "8px",
+            background: "rgba(255,255,255,0.12)",
+            borderRadius: "999px",
+            overflow: "hidden",
+            marginBottom: "14px",
+          }}
+        >
+          <div
+            style={{
+              width: `${percent}%`,
+              height: "100%",
+              background: "#4f46e5",
+              transition: "width 0.4s ease",
+            }}
+          />
         </div>
 
         {/* ADD */}
         <form onSubmit={addTask}>
           <input
+            ref={inputRef}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Type task… AI will score urgency"
-            style={{ width: "100%", padding: "14px", borderRadius: "12px", border: "none", marginBottom: "6px", background: dark ? "#020617" : "#f1f5f9", color: text }}
+            placeholder="Type task… AI will analyze"
+            className="glass"
+            style={{
+              width: "100%",
+              padding: "14px",
+              borderRadius: "12px",
+              border: "none",
+              marginBottom: "6px",
+              background: glass,
+              color: text,
+              outline: "none",
+            }}
           />
-
-          {aiPreview && (
+          {title && (
             <p style={{ fontSize: "13px", opacity: 0.8 }}>
-              🧠 Urgency Score: <b>{aiPreview.score}/100</b> — {aiPreview.reason}
+              {aiThinking
+                ? "🧠 AI analyzing…"
+                : `🤖 Score ${aiPreview.score}/100 — ${aiPreview.reason}`}
             </p>
           )}
         </form>
@@ -134,21 +278,53 @@ function App() {
         {/* FILTER */}
         <div style={{ display: "flex", gap: "6px", margin: "14px 0" }}>
           {["all", "pending", "completed"].map((f) => (
-            <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: "8px", borderRadius: "10px", border: "none", background: filter === f ? "#4f46e5" : "#020617", color: "#fff" }}>
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className="glass"
+              style={{
+                flex: 1,
+                padding: "8px",
+                borderRadius: "10px",
+                border: "none",
+                color: text,
+                background:
+                  filter === f ? "rgba(79,70,229,0.8)" : glass,
+              }}
+            >
               {f.toUpperCase()}
             </button>
           ))}
         </div>
 
         {/* TASKS */}
-        {filteredTasks.map((task) => {
+        {visibleTasks.map((task) => {
           const ai = analyzeTask(task.title);
-
           return (
-            <div key={task._id} style={{ background: dark ? "#020617" : "#f9fafb", padding: "14px", borderRadius: "14px", marginBottom: "10px", borderLeft: `6px solid ${priorityColor[ai.priority]}`, opacity: task.completed ? 0.6 : 1 }}>
-              <strong style={{ textDecoration: task.completed ? "line-through" : "none" }}>{task.title}</strong>
-              <p style={{ fontSize: "12px", opacity: 0.7 }}>🤖 Score {ai.score}/100 — {ai.reason}</p>
-              <div style={{ marginTop: "8px", display: "flex", gap: "6px" }}>
+            <div
+              key={task._id}
+              className="task-card glass"
+              style={{
+                padding: "14px",
+                borderRadius: "14px",
+                marginBottom: "10px",
+                borderLeft: `6px solid ${priorityColor[ai.priority]}`,
+                opacity: task.completed ? 0.6 : 1,
+              }}
+            >
+              <strong
+                style={{
+                  textDecoration: task.completed ? "line-through" : "none",
+                }}
+              >
+                {task.title}
+              </strong>
+
+              <p style={{ fontSize: "12px", opacity: 0.7 }}>
+                🤖 {ai.score}/100 — {ai.reason}
+              </p>
+
+              <div style={{ display: "flex", gap: "6px" }}>
                 <button onClick={() => toggleComplete(task._id)}>✓</button>
                 <button onClick={() => deleteTask(task._id)}>🗑</button>
               </div>
