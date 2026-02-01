@@ -1,79 +1,72 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import API from "../services/api";
+import axios from "axios";
 
-export default function Login() {
+export default function Login({ onAuth }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    console.log("LOGIN CLICKED");
+  const submit = async () => {
+    setError("");
+
+    if (!email || !password) {
+      setError("Email and password required");
+      return;
+    }
 
     try {
-      const res = await API.post("/auth/login", {
-        email,
-        password,
-      });
+      console.log("LOGIN CLICKED", email, password);
 
-      console.log("LOGIN RESPONSE FULL:", res);
-      console.log("LOGIN RESPONSE DATA:", res.data);
+      const res = await axios.post(
+        "http://localhost:5001/api/auth/login",
+        { email, password }
+      );
 
-      // 🔴 IMPORTANT SAFETY CHECK
-      if (!res.data || !res.data.token) {
-        console.error("❌ TOKEN NOT FOUND IN RESPONSE");
-        alert("Login failed: token missing");
-        return;
-      }
+      console.log("LOGIN RESPONSE", res.data);
 
-      // ✅ SAVE TOKEN
       localStorage.setItem("token", res.data.token);
 
-      console.log(
-        "✅ TOKEN SAVED:",
-        localStorage.getItem("token")
-      );
-
-      // ✅ GO TO DASHBOARD
-      navigate("/dashboard");
-
+      onAuth(); // 🔥 THIS WAS THE MAIN THING
     } catch (err) {
-      console.error(
-        "LOGIN ERROR:",
-        err.response?.data || err.message
+      console.error("LOGIN ERROR", err);
+      setError(
+        err.response?.data?.message || "Login failed"
       );
-      alert("Login failed");
     }
   };
 
   return (
-    <div style={{ padding: 40, color: "white" }}>
-      <h1>Login</h1>
+    <div className="h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-6 rounded shadow w-80">
+        <h2 className="text-xl font-semibold mb-4">Login</h2>
 
-      <form onSubmit={handleLogin}>
+        {error && (
+          <p className="text-red-500 text-sm mb-3">{error}</p>
+        )}
+
         <input
           type="email"
           placeholder="Email"
+          className="w-full mb-2 border p-2"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
         />
-
-        <br /><br />
 
         <input
           type="password"
           placeholder="Password"
+          className="w-full mb-4 border p-2"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          required
         />
 
-        <br /><br />
-
-        <button type="submit">Login</button>
-      </form>
+        <button
+          onClick={submit}
+          className="w-full bg-blue-600 text-white py-2 rounded"
+        >
+          Login
+        </button>
+      </div>
     </div>
   );
 }
