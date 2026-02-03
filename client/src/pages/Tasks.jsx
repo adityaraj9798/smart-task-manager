@@ -10,96 +10,82 @@ import {
 } from "../services/taskApi";
 
 export default function Tasks() {
-  const [task, setTask] = useState("");
   const [tasks, setTasks] = useState([]);
   const [view, setView] = useState("Tasks");
-  const [layout, setLayout] = useState("list");
-  const [sortBy, setSortBy] = useState("created");
-  const [groupBy, setGroupBy] = useState("none");
-  const [showSort, setShowSort] = useState(false);
-  const [showGroup, setShowGroup] = useState(false);
+  const [layout, setLayout] = useState("list"); // list | grid
+  const [search, setSearch] = useState("");
+  const [taskText, setTaskText] = useState("");
 
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [notes, setNotes] = useState("");
+
+  /* ================= LOAD TASKS ================= */
   useEffect(() => {
-    fetchTasks().then((res) => setTasks(res.data));
+    fetchTasks()
+      .then((res) => setTasks(res.data || []))
+      .catch(() => setTasks([]));
   }, []);
 
+  /* ================= ADD TASK ================= */
   const handleAdd = async () => {
-    if (!task.trim()) return;
-    const res = await addTask(task.trim());
+    if (!taskText.trim()) return;
+    const res = await addTask(taskText.trim());
     setTasks([res.data, ...tasks]);
-    setTask("");
+    setTaskText("");
   };
 
-  const updateTask = (updated) =>
-    setTasks(tasks.map((t) => (t._id === updated._id ? updated : t)));
-
-  const handleToggle = async (id) => updateTask((await toggleTask(id)).data);
-  const handleImportant = async (id) =>
-    updateTask((await toggleImportant(id)).data);
-  const handleMyDay = async (id) =>
-    updateTask((await toggleMyDay(id)).data);
-  const handleDueDate = async (id, date) =>
-    updateTask((await setDueDate(id, date)).data);
-
-  const handleDelete = async (id) => {
-    await deleteTask(id);
-    setTasks(tasks.filter((t) => t._id !== id));
+  const updateTask = (updated) => {
+    setTasks((prev) =>
+      prev.map((t) => (t._id === updated._id ? updated : t))
+    );
   };
 
-  /* FILTER */
-  const cleaned = tasks.filter((t) => t.text && t.text.trim() !== "");
-  let visible = cleaned;
-  if (view === "Important") visible = cleaned.filter((t) => t.important);
-  if (view === "My Day") visible = cleaned.filter((t) => t.myDay);
-  if (view === "Planned") visible = cleaned.filter((t) => t.dueDate);
+  /* ================= FILTER ================= */
+  let visible = tasks.filter(
+    (t) =>
+      t?.text &&
+      t.text.toLowerCase().includes(search.toLowerCase())
+  );
 
-  /* SORT */
-  const sorted = [...visible].sort((a, b) => {
-    if (sortBy === "alpha") return a.text.localeCompare(b.text);
-    if (sortBy === "due") {
-      if (!a.dueDate) return 1;
-      if (!b.dueDate) return -1;
-      return new Date(a.dueDate) - new Date(b.dueDate);
-    }
-    if (sortBy === "important")
-      return (b.important === true) - (a.important === true);
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
+  if (view === "Important") visible = visible.filter((t) => t.important);
+  if (view === "My Day") visible = visible.filter((t) => t.myDay);
+  if (view === "Planned") visible = visible.filter((t) => t.dueDate);
 
-  /* GROUP */
-  const groups =
-    groupBy === "none"
-      ? { All: sorted }
-      : groupBy === "completed"
-      ? {
-          Completed: sorted.filter((t) => t.completed),
-          Pending: sorted.filter((t) => !t.completed),
-        }
-      : groupBy === "important"
-      ? {
-          Important: sorted.filter((t) => t.important),
-          Others: sorted.filter((t) => !t.important),
-        }
-      : {
-          Planned: sorted.filter((t) => t.dueDate),
-          "No date": sorted.filter((t) => !t.dueDate),
-        };
+  /* ================= DRAG REORDER ================= */
+  const onDragEnd = (from, to) => {
+    if (to < 0) return;
+    const copy = [...tasks];
+    const [moved] = copy.splice(from, 1);
+    copy.splice(to, 0, moved);
+    setTasks(copy);
+  };
+
+  /* ================= DUE DATE BADGE ================= */
+  const dueBadge = (due) => {
+    if (!due) return null;
+    const d = new Date(due);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (d < today) return "Overdue";
+    if (d.getTime() === today.getTime()) return "Today";
+    return null;
+  };
 
   return (
-    <div className="h-screen flex bg-[#f5f6f8] text-gray-800">
+    <div className="h-screen flex bg-[#f5f6f8]">
       {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r flex flex-col">
+      <aside className="w-64 bg-white border-r">
         <div className="px-6 py-4 text-xl font-semibold text-blue-600">
           To Do
         </div>
-
         {["My Day", "Important", "Planned", "Tasks"].map((item) => (
           <div
             key={item}
             onClick={() => setView(item)}
-            className={`mx-3 my-1 px-3 py-2 rounded-md cursor-pointer transition ${
+            className={`mx-3 my-1 px-4 py-2 rounded cursor-pointer ${
               view === item
-                ? "bg-blue-50 text-blue-600 font-medium"
+                ? "bg-blue-100 text-blue-600"
                 : "hover:bg-gray-100"
             }`}
           >
@@ -109,144 +95,168 @@ export default function Tasks() {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col relative">
         {/* TOP BAR */}
-        <div className="h-14 bg-white border-b flex items-center justify-between px-6">
-          <h1 className="text-lg font-semibold">{view}</h1>
+        <div className="h-14 bg-white border-b flex items-center gap-3 px-6">
+          <h1 className="text-lg font-semibold flex-1">{view}</h1>
 
-          <div className="flex gap-6 text-sm">
-            <div className="flex gap-3">
-              <span
-                onClick={() => setLayout("grid")}
-                className={`cursor-pointer ${
-                  layout === "grid" ? "text-blue-600 font-medium" : ""
-                }`}
-              >
-                Grid
-              </span>
-              <span
-                onClick={() => setLayout("list")}
-                className={`cursor-pointer ${
-                  layout === "list" ? "text-blue-600 font-medium" : ""
-                }`}
-              >
-                List
-              </span>
-            </div>
+          <button
+            onClick={() => setLayout("list")}
+            className={layout === "list" ? "font-bold" : ""}
+          >
+            List
+          </button>
+          <button
+            onClick={() => setLayout("grid")}
+            className={layout === "grid" ? "font-bold" : ""}
+          >
+            Grid
+          </button>
 
-            <span
-              onClick={() => setShowSort(!showSort)}
-              className="cursor-pointer hover:text-blue-600"
-            >
-              Sort
-            </span>
-
-            <span
-              onClick={() => setShowGroup(!showGroup)}
-              className="cursor-pointer hover:text-blue-600"
-            >
-              Group
-            </span>
-          </div>
+          <input
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="border rounded px-2 py-1 text-sm"
+          />
         </div>
 
         {/* CONTENT */}
-        <div className="flex-1 overflow-auto px-10 py-6">
+        <div
+          className={`flex-1 overflow-auto px-8 py-6 ${
+            layout === "grid"
+              ? "grid grid-cols-2 gap-4"
+              : ""
+          }`}
+        >
+          {/* ADD TASK */}
           {view === "Tasks" && (
-            <div className="bg-white rounded-lg shadow-sm p-4 mb-6 flex gap-3">
+            <div className="bg-white p-4 rounded shadow mb-4 col-span-full">
               <input
-                value={task}
-                onChange={(e) => setTask(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
                 placeholder="Add a task"
-                className="flex-1 outline-none text-sm"
+                value={taskText}
+                onChange={(e) => setTaskText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                className="w-full outline-none"
               />
-              <button
-                onClick={handleAdd}
-                className="text-sm text-blue-600 font-medium"
-              >
-                Add
-              </button>
             </div>
           )}
 
-          {Object.entries(groups).map(
-            ([groupName, groupTasks]) =>
-              groupTasks.length > 0 && (
-                <div key={groupName} className="mb-6">
-                  {groupBy !== "none" && (
-                    <h2 className="text-xs font-semibold text-gray-500 mb-2 uppercase">
-                      {groupName}
-                    </h2>
-                  )}
+          {/* TASK LIST */}
+          {visible.map((t, i) => (
+            <div
+              key={t._id}
+              draggable
+              onDragStart={(e) =>
+                e.dataTransfer.setData("index", i)
+              }
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) =>
+                onDragEnd(
+                  Number(e.dataTransfer.getData("index")),
+                  i
+                )
+              }
+              onClick={() => {
+                setSelectedTask(t);
+                setNotes(t.notes || "");
+              }}
+              className="bg-white px-4 py-3 rounded shadow cursor-pointer flex gap-3 items-center"
+            >
+              <input
+                type="checkbox"
+                checked={!!t.completed}
+                onChange={async (e) => {
+                  e.stopPropagation();
+                  const res = await toggleTask(t._id);
+                  updateTask(res.data);
+                }}
+              />
 
-                  <div
-                    className={
-                      layout === "grid"
-                        ? "grid grid-cols-3 gap-4"
-                        : "space-y-2"
-                    }
-                  >
-                    {groupTasks.map((t) => (
-                      <div
-                        key={t._id}
-                        className="bg-white rounded-lg shadow-sm px-4 py-3 flex items-center justify-between hover:shadow transition"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div
-                            onClick={() => handleToggle(t._id)}
-                            className={`w-5 h-5 rounded-full border cursor-pointer ${
-                              t.completed
-                                ? "bg-blue-600 border-blue-600"
-                                : "border-gray-400"
-                            }`}
-                          />
-                          <span
-                            className={
-                              t.completed
-                                ? "line-through text-gray-400"
-                                : ""
-                            }
-                          >
-                            {t.text}
-                          </span>
-                        </div>
+              <span
+                className={`flex-1 ${
+                  t.completed
+                    ? "line-through text-gray-400"
+                    : ""
+                }`}
+              >
+                {t.text}
+              </span>
 
-                        <div className="flex gap-4 text-lg">
-                          <span
-                            onClick={() => handleMyDay(t._id)}
-                            className={`cursor-pointer ${
-                              t.myDay
-                                ? "text-orange-400"
-                                : "text-gray-300 hover:text-orange-300"
-                            }`}
-                          >
-                            ☀
-                          </span>
-                          <span
-                            onClick={() => handleImportant(t._id)}
-                            className={`cursor-pointer ${
-                              t.important
-                                ? "text-yellow-400"
-                                : "text-gray-300 hover:text-yellow-300"
-                            }`}
-                          >
-                            ★
-                          </span>
-                          <button
-                            onClick={() => handleDelete(t._id)}
-                            className="text-gray-300 hover:text-red-500"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-          )}
+              {dueBadge(t.dueDate) && (
+                <span className="text-xs px-2 py-1 bg-red-100 text-red-600 rounded">
+                  {dueBadge(t.dueDate)}
+                </span>
+              )}
+
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const res = await toggleImportant(t._id);
+                  updateTask(res.data);
+                }}
+              >
+                {t.important ? "⭐" : "☆"}
+              </button>
+            </div>
+          ))}
         </div>
+
+        {/* DETAILS PANEL */}
+        {selectedTask && (
+          <div className="absolute right-0 top-0 h-full w-80 bg-white border-l shadow-lg p-5">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="font-semibold">Task details</h3>
+              <button onClick={() => setSelectedTask(null)}>✕</button>
+            </div>
+
+            <p className="font-medium mb-2">{selectedTask.text}</p>
+
+            <textarea
+              placeholder="Add notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={() =>
+                updateTask({
+                  ...selectedTask,
+                  notes,
+                })
+              }
+              className="w-full border rounded p-2 text-sm mb-4"
+            />
+
+            <input
+              type="date"
+              value={
+                selectedTask.dueDate
+                  ? selectedTask.dueDate.slice(0, 10)
+                  : ""
+              }
+              onChange={async (e) => {
+                const res = await setDueDate(
+                  selectedTask._id,
+                  e.target.value
+                );
+                updateTask(res.data);
+                setSelectedTask(res.data);
+              }}
+              className="border rounded px-2 py-1 w-full"
+            />
+
+            <button
+              onClick={async () => {
+                await deleteTask(selectedTask._id);
+                setSelectedTask(null);
+                setTasks((t) =>
+                  t.filter((x) => x._id !== selectedTask._id)
+                );
+              }}
+              className="text-red-500 mt-6"
+            >
+              Delete task
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
