@@ -1,11 +1,8 @@
-import API from "./api";
+import axios from "axios";
 
-export const getTasks = async () => {
-  const res = await API.get("/tasks");
-  return res.data;
-};
+const API = "http://localhost:5000/api/tasks";
 
-export const createTask = async (title) => {
-  const res = await API.post("/tasks", { title });
-  return res.data;
-};
+export const fetchTasks = () => axios.get(API);
+export const addTask = (text) => axios.post(API, { text });
+export const deleteTask = (id) => axios.delete(`${API}/${id}`);
+export const toggleTask = (id) => axios.patch(`${API}/${id}`);
