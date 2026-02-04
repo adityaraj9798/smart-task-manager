@@ -1,79 +1,62 @@
 import { useState } from "react";
 import axios from "axios";
 
-export default function Login({ onAuth, goRegister }) {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const submit = async () => {
-    setError("");
-
-    if (!email || !password) {
-      setError("Email and password required");
-      return;
-    }
-
+  const handleLogin = async () => {
     try {
       const res = await axios.post(
         "http://localhost:5001/api/auth/login",
         { email, password }
       );
 
-      // 🔥 save token
       localStorage.setItem("token", res.data.token);
-
-      // 🔥 move to Tasks
-      onAuth();
-    } catch (err) {
-      setError(
-        err.response?.data?.message || "Login failed"
-      );
+      window.location.href = "/tasks";
+    } catch {
+      setError("Invalid credentials");
     }
   };
 
   return (
     <div className="h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded shadow w-80">
-        <h2 className="text-xl font-semibold mb-4 text-center">
-          Login
-        </h2>
-
-        {error && (
-          <p className="text-red-500 text-sm mb-3 text-center">
-            {error}
-          </p>
-        )}
+        <h2 className="text-xl font-semibold mb-4">Login</h2>
 
         <input
-          type="email"
           placeholder="Email"
-          className="w-full mb-2 border p-2 rounded"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          className="w-full border px-3 py-2 mb-3"
         />
 
         <input
           type="password"
           placeholder="Password"
-          className="w-full mb-4 border p-2 rounded"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          className="w-full border px-3 py-2 mb-3"
         />
 
+        {error && (
+          <div className="text-red-500 text-sm mb-2">
+            {error}
+          </div>
+        )}
+
         <button
-          onClick={submit}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+          onClick={handleLogin}
+          className="w-full bg-blue-600 text-white py-2 rounded"
         >
           Login
         </button>
 
-        {/* 🔁 SWITCH TO REGISTER */}
-        <p
-          onClick={goRegister}
-          className="text-sm text-blue-600 mt-4 cursor-pointer text-center"
-        >
-          New user? Register
+        <p className="text-xs text-gray-500 mt-3">
+          Demo login:<br />
+          email: <b>test@test.com</b><br />
+          password: <b>123456</b>
         </p>
       </div>
     </div>
