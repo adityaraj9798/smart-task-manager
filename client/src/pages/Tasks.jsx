@@ -8,6 +8,7 @@ import {
   FiCircle,
   FiCheckCircle,
   FiBell,
+  FiSearch, // 🔍 SEARCH (NEW)
 } from "react-icons/fi";
 
 import {
@@ -31,9 +32,7 @@ const normalizeDate = (d) => {
 };
 
 const today = normalizeDate(new Date());
-const tomorrow = normalizeDate(
-  new Date(Date.now() + 86400000)
-);
+const tomorrow = normalizeDate(new Date(Date.now() + 86400000));
 
 export default function Tasks() {
   const [tasks, setTasks] = useState([]);
@@ -45,6 +44,8 @@ export default function Tasks() {
 
   const [deleted, setDeleted] = useState(null);
   const [undoTimer, setUndoTimer] = useState(null);
+
+  const [search, setSearch] = useState(""); // 🔍 SEARCH (NEW)
 
   /* ================= NOTIFICATION PERMISSION ================= */
   useEffect(() => {
@@ -119,14 +120,25 @@ export default function Tasks() {
 
   /* ================= FILTERED TASKS ================= */
   const visibleTasks = useMemo(() => {
-    if (view === "Important")
-      return tasks.filter((t) => t.important);
+    let filtered = tasks;
 
-    if (view === "My Day")
-      return tasks.filter((t) => t.myDay);
+    if (view === "Important") {
+      filtered = filtered.filter((t) => t.important);
+    }
 
-    return tasks;
-  }, [tasks, view]);
+    if (view === "My Day") {
+      filtered = filtered.filter((t) => t.myDay);
+    }
+
+    // 🔍 SEARCH FILTER (NEW)
+    if (search.trim()) {
+      filtered = filtered.filter((t) =>
+        t.text.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [tasks, view, search]);
 
   /* ================= PLANNED GROUPS ================= */
   const plannedGroups = useMemo(() => {
@@ -139,6 +151,12 @@ export default function Tasks() {
 
     tasks.forEach((t) => {
       if (!t.dueDate || !t.text?.trim()) return;
+      if (
+        search.trim() &&
+        !t.text.toLowerCase().includes(search.toLowerCase())
+      )
+        return;
+
       const d = normalizeDate(t.dueDate);
 
       if (d < today) groups.earlier.push(t);
@@ -148,67 +166,91 @@ export default function Tasks() {
     });
 
     return groups;
-  }, [tasks]);
+  }, [tasks, search]);
 
   /* ================= RENDER TASK ================= */
-  const renderTask = (t) => (
-    <div
-      key={t._id}
-      onClick={() => setSelected(t)}
-      className="flex justify-between items-center px-4 py-3 border-b cursor-pointer hover:bg-gray-50"
-    >
-      <div className="flex items-center gap-3">
-        <button
-          onClick={async (e) => {
-            e.stopPropagation();
-            updateLocal(await toggleTask(t._id));
-          }}
-        >
-          {t.completed ? (
-            <FiCheckCircle className="text-blue-600" />
-          ) : (
-            <FiCircle />
-          )}
-        </button>
+  const renderTask = (t) => {
+    const totalSteps = t.subtasks?.length || 0;
+    const completedSteps =
+      t.subtasks?.filter((s) => s.completed).length || 0;
 
-        <span
-          className={
-            t.completed
-              ? "line-through text-gray-400"
-              : ""
-          }
-        >
-          {t.text}
-        </span>
+    return (
+      <div
+        key={t._id}
+        onClick={() => setSelected(t)}
+        className="px-4 py-3 border-b cursor-pointer hover:bg-gray-50"
+      >
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                updateLocal(await toggleTask(t._id));
+              }}
+            >
+              {t.completed ? (
+                <FiCheckCircle className="text-blue-600" />
+              ) : (
+                <FiCircle />
+              )}
+            </button>
+
+            <span
+              className={
+                t.completed
+                  ? "line-through text-gray-400"
+                  : ""
+              }
+            >
+              {t.text}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                updateLocal(await toggleImportant(t._id));
+              }}
+            >
+              <FiStar
+                className={
+                  t.important
+                    ? "text-blue-600 fill-blue-600"
+                    : "text-gray-400"
+                }
+              />
+            </button>
+
+            <FiTrash2
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(t);
+              }}
+              className="text-red-400 hover:text-red-600"
+            />
+          </div>
+        </div>
+
+        {/* LIST PROGRESS */}
+        {totalSteps > 0 && (
+          <div className="mt-2 ml-7">
+            <div className="h-1.5 bg-gray-200 rounded">
+              <div
+                className="h-1.5 bg-blue-600 rounded transition-all"
+                style={{
+                  width: `${(completedSteps / totalSteps) * 100}%`,
+                }}
+              />
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {completedSteps}/{totalSteps} steps
+            </div>
+          </div>
+        )}
       </div>
-
-      <div className="flex items-center gap-4">
-        {/* ⭐ IMPORTANT */}
-        <button
-          onClick={async (e) => {
-            e.stopPropagation();
-            updateLocal(await toggleImportant(t._id));
-          }}
-        >
-          <FiStar
-            className={
-              t.important
-                ? "text-blue-600 fill-blue-600"
-                : "text-gray-400"
-            }
-          />
-        </button>
-
-        <FiTrash2
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDelete(t);
-          }}
-          className="text-red-400 hover:text-red-600"
-        />
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="h-screen flex bg-[#f5f6f8]">
@@ -241,9 +283,18 @@ export default function Tasks() {
 
       {/* MAIN */}
       <main className="flex-1 p-6 overflow-y-auto">
-        <h1 className="text-lg font-semibold mb-4">
-          {view}
-        </h1>
+        <h1 className="text-lg font-semibold mb-4">{view}</h1>
+
+        {/* 🔍 SEARCH BAR (NEW) */}
+        <div className="bg-white p-3 rounded shadow mb-4 flex items-center gap-3">
+          <FiSearch className="text-gray-400" />
+          <input
+            placeholder="Search tasks"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 outline-none"
+          />
+        </div>
 
         {view === "Tasks" && (
           <div className="bg-white p-3 rounded shadow mb-4 flex gap-3">
@@ -283,7 +334,7 @@ export default function Tasks() {
             </>
           ) : visibleTasks.length === 0 ? (
             <div className="p-6 text-center text-gray-400">
-              No tasks here
+              No matching tasks
             </div>
           ) : (
             visibleTasks.map(renderTask)
@@ -311,10 +362,7 @@ export default function Tasks() {
             }
             onChange={async (e) =>
               updateLocal(
-                await setDueDate(
-                  selected._id,
-                  e.target.value
-                )
+                await setDueDate(selected._id, e.target.value)
               )
             }
             className="border rounded px-2 py-1 w-full mb-3"
@@ -325,17 +373,6 @@ export default function Tasks() {
             className="flex items-center gap-2 text-blue-600 mb-3"
           >
             <FiBell /> Set reminder
-          </button>
-
-          <button
-            onClick={async () =>
-              updateLocal(
-                await toggleImportant(selected._id)
-              )
-            }
-            className="flex items-center gap-2 text-blue-600 mb-4"
-          >
-            <FiStar /> Toggle important
           </button>
 
           {/* STEPS */}
@@ -352,10 +389,7 @@ export default function Tasks() {
                   checked={s.completed}
                   onChange={async () =>
                     updateLocal(
-                      await toggleSubtask(
-                        selected._id,
-                        s._id
-                      )
+                      await toggleSubtask(selected._id, s._id)
                     )
                   }
                 />
@@ -371,10 +405,7 @@ export default function Tasks() {
                 <button
                   onClick={async () =>
                     updateLocal(
-                      await deleteSubtask(
-                        selected._id,
-                        s._id
-                      )
+                      await deleteSubtask(selected._id, s._id)
                     )
                   }
                   className="text-red-400"
@@ -391,10 +422,7 @@ export default function Tasks() {
               onKeyDown={async (e) => {
                 if (e.key === "Enter" && stepText.trim()) {
                   updateLocal(
-                    await addSubtask(
-                      selected._id,
-                      stepText
-                    )
+                    await addSubtask(selected._id, stepText)
                   );
                   setStepText("");
                 }
