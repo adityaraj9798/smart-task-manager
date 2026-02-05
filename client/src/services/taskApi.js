@@ -2,66 +2,64 @@ import axios from "axios";
 
 const API = "http://localhost:5001/api/tasks";
 
-/* 🔥 TOKEN HEADER (PURANE FLOW KE SAATH) */
-const authConfig = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  },
-});
+export const fetchTasks = async () => {
+  const res = await axios.get(API);
+  return res.data;
+};
 
-/* ================= TASK APIs ================= */
+export const addTask = async (text) => {
+  const res = await axios.post(API, { text });
+  return res.data;
+};
 
-export const fetchTasks = () =>
-  axios.get(API, authConfig());
+export const updateTask = async (id, data) => {
+  const res = await axios.patch(`${API}/${id}`, data);
+  return res.data;
+};
 
-export const addTask = (text) =>
-  axios.post(API, { text }, authConfig());
+export const toggleTask = async (id) => {
+  const res = await axios.patch(`${API}/${id}/toggle`);
+  return res.data;
+};
 
-export const deleteTask = (id) =>
-  axios.delete(`${API}/${id}`, authConfig());
+export const toggleImportant = async (id) => {
+  const res = await axios.patch(`${API}/${id}/important`);
+  return res.data;
+};
 
-export const toggleTask = (id) =>
-  axios.patch(`${API}/${id}`, {}, authConfig());
+export const toggleMyDay = async (id) => {
+  const res = await axios.patch(`${API}/${id}/myday`);
+  return res.data;
+};
 
-export const toggleImportant = (id) =>
-  axios.patch(`${API}/${id}/important`, {}, authConfig());
+export const setDueDate = async (id, dueDate) => {
+  const res = await axios.patch(`${API}/${id}/duedate`, { dueDate });
+  return res.data;
+};
 
-export const toggleMyDay = (id) =>
-  axios.patch(`${API}/${id}/myday`, {}, authConfig());
+export const deleteTask = async (id) => {
+  await axios.delete(`${API}/${id}`);
+};
 
-export const setDueDate = (id, dueDate) =>
-  axios.patch(
-    `${API}/${id}/duedate`,
-    { dueDate },
-    authConfig()
-  );
-
-/* ================================================= */
-/* 🔥 SUBTASK APIs — NAYA ADD (ISSE ERROR FIX HOGA) */
-/* ================================================= */
-
-export const addSubtask = (taskId, text) =>
-  axios.post(
+/* 🧩 SUBTASKS */
+export const addSubtask = async (taskId, text) => {
+  const res = await axios.post(
     `${API}/${taskId}/subtasks`,
-    { text },
-    authConfig()
+    { text }
   );
+  return res.data;
+};
 
-export const toggleSubtask = (taskId, subId) =>
-  axios.patch(
-    `${API}/${taskId}/subtasks/${subId}`,
-    {},
-    authConfig()
+export const toggleSubtask = async (taskId, subId) => {
+  const res = await axios.patch(
+    `${API}/${taskId}/subtasks/${subId}`
   );
+  return res.data;
+};
 
-export const deleteSubtask = (taskId, subId) =>
-  axios.delete(
-    `${API}/${taskId}/subtasks/${subId}`,
-    authConfig()
+export const deleteSubtask = async (taskId, subId) => {
+  const res = await axios.delete(
+    `${API}/${taskId}/subtasks/${subId}`
   );
-export const updateTaskNotes = (id, notes) =>
-  axios.patch(
-    `${API}/${id}`,
-    { notes },
-    authConfig()
-  );
+  return res.data;
+};
