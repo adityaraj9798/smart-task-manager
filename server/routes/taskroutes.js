@@ -1,55 +1,23 @@
 const express = require("express");
 const router = express.Router();
-const Task = require("../models/Task");
+const taskController = require("../controllers/taskController");
 
-router.post("/add", async (req, res) => {
-  try {
-    if (!req.body.title) {
-      return res.status(400).json({ success: false });
-    }
+// Basic CRUD
+router.get("/", taskController.getTasks);
+router.post("/", taskController.createTask);
+router.delete("/:id", taskController.deleteTask);
 
-    const task = new Task({
-      title: req.body.title,
-      completed: false,
-    });
+// General Update (IMPORTANT: Handles Category, Priority, Due Date, and Notes)
+router.patch("/:id", taskController.updateTask);
 
-    await task.save();
-    res.json({ success: true, task });
-  } catch (e) {
-    res.status(500).json({ success: false });
-  }
-});
+// Status Toggles
+router.patch("/:id/toggle", taskController.toggleTask);
+router.patch("/:id/important", taskController.toggleImportant);
+router.patch("/:id/myday", taskController.toggleMyDay);
 
-router.get("/all", async (req, res) => {
-  try {
-    const tasks = await Task.find();
-    res.json({ success: true, tasks });
-  } catch (e) {
-    res.status(500).json({ success: false });
-  }
-});
-
-router.patch("/:id/complete", async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id);
-    if (!task) {
-      return res.status(404).json({ success: false });
-    }
-    task.completed = !task.completed;
-    await task.save();
-    res.json({ success: true, task });
-  } catch (e) {
-    res.status(500).json({ success: false });
-  }
-});
-
-router.delete("/:id", async (req, res) => {
-  try {
-    await Task.findByIdAndDelete(req.params.id);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false });
-  }
-});
+// Subtasks
+router.post("/:id/subtasks", taskController.addSubtask);
+router.patch("/:id/subtasks/:subId", taskController.toggleSubtask);
+router.delete("/:id/subtasks/:subId", taskController.deleteSubtask);
 
 module.exports = router;

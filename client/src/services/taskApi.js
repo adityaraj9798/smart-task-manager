@@ -1,6 +1,10 @@
 import axios from "axios";
 
-const API = "http://localhost:5001/api/tasks";
+/**
+ * This variable will automatically switch between your live server 
+ * and your local machine based on where the app is running.
+ */
+const API = import.meta.env.VITE_API_URL || "http://localhost:5001/api/tasks";
 
 export const fetchTasks = async () => {
   const res = await axios.get(API);

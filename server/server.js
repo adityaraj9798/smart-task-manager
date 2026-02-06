@@ -3,53 +3,30 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 require("dotenv").config();
 
+const taskRoutes = require("./routes/taskRoutes");
+
 const app = express();
 
-/* =======================
-   MIDDLEWARE
-======================= */
-app.use(cors());
-app.use(express.json());
-app.get("/api/test", (req, res) => {
-  res.json({ message: "Backend is connected successfully 🚀" });
-});
+/* 🔥 REQUIRED MIDDLEWARES */
+app.use(cors());                 // <<< THIS FIXES IT
+app.use(express.json());         // <<< REQUIRED FOR req.body
 
-
-
-/* =======================
-   ROUTES
-======================= */
-const authRoutes = require("./routes/authRoutes");
-const taskRoutes = require("./routes/taskRoutes");
-const userRoutes = require("./routes/userRoutes");
-
-app.use("/api/auth", authRoutes);
-app.use("/api/tasks", taskRoutes);
-app.use("/api/user", userRoutes);
-
-/* =======================
-   TEST ROUTE
-======================= */
 app.get("/", (req, res) => {
-  res.send("Server running");
+  res.send("Smart Task Manager API running 🚀");
 });
 
-/* =======================
-   DATABASE CONNECTION
-======================= */
+app.use("/api/tasks", taskRoutes);
+
+const PORT = 5001;
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
-    console.log("MongoDB connected");
+    console.log("MongoDB connected ✅");
+    app.listen(PORT, () => {
+      console.log("Server running on port", PORT);
+    });
   })
-  .catch((error) => {
-    console.error("MongoDB connection error:", error.message);
+  .catch((err) => {
+    console.error(err.message);
   });
-
-/* =======================
-   SERVER START
-======================= */
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
