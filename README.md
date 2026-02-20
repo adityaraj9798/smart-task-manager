@@ -1,60 +1,73 @@
-# 📝 Smart Task Manager (MERN)
-
-A Microsoft To Do–style task management web application built using the **MERN stack**, featuring authentication, task organization, and a clean, modern UI.
-
----
-
 ## 🚀 Features
 
-### 🔐 Authentication
-- User registration & login using **JWT**
-- Secure routes (each user sees only their tasks)
-- Logout support
+### 🔐 Authentication & Security
+- User Registration & Login (JWT-based authentication)
+- Protected routes (each user accesses only their own tasks)
+- Secure password hashing
+- Logout functionality
 
-### ✅ Task Management
-- Add, edit, delete tasks
-- Mark tasks as **completed**
-- Inline task editing
-- Undo delete (toast-based)
+---
 
-### ⭐ Smart Organization
-- **My Day**, **Important**, **Planned** filters
+### 📝 Advanced Task Management
+- Create, edit, and delete tasks
+- Mark tasks as Completed or Pending
+- Assign categories:
+  - Work
+  - Personal
+  - Urgent
+  - Shopping
+  - Health
+- Set Threat Level / Priority:
+  - Low
+  - Medium
+  - High
+- Add deadline (due date picker)
+- Add sub-objectives (subtasks)
+- Add transmission notes (additional details)
+- Archive completed tasks
+- Real-time task updates
+
+---
+
+### 🧠 Intelligence Panel
+- Expandable right-side task intelligence panel
+- Dynamic category assignment
+- Live priority adjustment
+- Deadline modification
+- Focus Mode activation
+- Terminate record (task deletion control)
+
+---
+
+### 📊 Productivity Tracking
+- Efficiency percentage tracker
+- Weekly streak monitoring (S M T W T F S)
+- Completed vs pending task tracking
+- Visual productivity insights
+
+---
+
+### 🔎 Smart Filtering & Navigation
+- Filter tasks by:
+  - All
+  - Work
+  - Personal
+  - Urgent
+  - Shopping
+  - Health
 - Search tasks instantly
-- Sort tasks by:
-  - Name (A–Z)
-  - Due date
-  - Importance
-- Group tasks by:
-  - Today
-  - Tomorrow
-  - Later
-
-### 🧩 Advanced UI (Microsoft To Do–like)
-- Grid / List view toggle
-- Expandable “Add Task” panel
-- Task details side panel:
-  - Edit title
-  - Toggle Important / My Day
-  - Change due date
-  - Delete task
-- Clean, responsive layout
+- Dedicated sections:
+  - My Day
+  - Important
+  - Planned
+  - Tasks
+  - Archive
 
 ---
 
-## 🛠️ Tech Stack
-
-**Frontend**
-- React
-- Tailwind CSS
-- Axios
-
-**Backend**
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
-- JWT Authentication
-
----
-
-
+### 🎨 UI / UX
+- Modern dark-themed dashboard interface
+- Responsive design (mobile & desktop)
+- Interactive sidebar navigation
+- Smooth UI transitions
+- Clean and minimal layout
