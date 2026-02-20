@@ -71,3 +71,18 @@
 - Interactive sidebar navigation
 - Smooth UI transitions
 - Clean and minimal layout
+
+- ## 📸 Screenshots
+
+### 🏠 Dashboard View
+![Dashboard](screenshots/dashboard.png)
+
+---
+
+### 🧠 Intelligence Panel
+![Intelligence Panel](screenshots/intelligence-panel.png)
+
+---
+
+### 📊 Productivity & Sidebar
+![Sidebar](screenshots/sidebar.png)
