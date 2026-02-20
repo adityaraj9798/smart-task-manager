@@ -80,7 +80,7 @@
 ---
 
 ### 🧠 Intelligence Panel
-![login](login.png)
+![login](C:\Users\adtiy\Desktop\github-desktop\smart-task-manager\screenshots\login.png)
 
 ---
 
