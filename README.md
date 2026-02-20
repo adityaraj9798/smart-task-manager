@@ -57,5 +57,4 @@ A Microsoft To Do–style task management web application built using the **MERN
 
 ---
 
-## 📂 Project Structure
 
