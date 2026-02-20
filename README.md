@@ -80,7 +80,7 @@
 ---
 
 ### 🧠 Intelligence Panel
-![Intelligence Panel](screenshots/intelligence-panel.png)
+![login](login.png)
 
 ---
 
